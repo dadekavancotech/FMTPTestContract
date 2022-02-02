@@ -1,4 +1,5 @@
 import React, { Component, useEffect, useState } from "react";
+import Void from "./contracts/Void.json";
 import DividendDistributor from "./contracts/DividendDistributor.json";
 import getWeb3 from "./getWeb3";
 import { Button } from "react-bootstrap";
@@ -6,9 +7,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
 const App = () => {
-  // const [web3, setWeb3] = useState();
-  // const [accounts, setAccounts] = useState([]);
-  // const [contract, setContract] = useState();
 
   const [conect, setContract] = useState({
     web3: null,
@@ -28,18 +26,26 @@ const App = () => {
       const web3 = await getWeb3();
       const accounts = await web3.eth.getAccounts();
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = DividendDistributor.networks[networkId];
-      const instance = new web3.eth.Contract(
-        DividendDistributor.abi,
+      const deployedNetwork = Void.networks[networkId];
+      const voidContract = new web3.eth.Contract(
+        Void.abi,
         deployedNetwork && deployedNetwork.address
       );
+
+      const dividendNetwork = DividendDistributor.networks[networkId];
+      const dividendDistributorContract = new web3.eth.Contract(
+        DividendDistributor.abi,
+        dividendNetwork && dividendNetwork.address
+      );
+
       var balance = await web3.eth.getBalance(accounts[0]);
       balance = web3.utils.fromWei(balance, "ether");
 
       setContract({
         web3,
         accounts,
-        contract: instance,
+        voidContract,
+        dividendDistributorContract,
         balance,
       });
     } catch (error) {
@@ -52,12 +58,12 @@ const App = () => {
 
   const ClaimNow = async () => {
     debugger;
-
-    var claimDividendResult = await conect.contract.methods
+    var adress = await conect.voidContract.methods.distributorAddress().call();
+    var result = await conect.dividendDistributorContract.methods
       .claimDividend()
       .send({ from: conect.accounts[0] });
 
-    setClaimDividendResult(claimDividendResult);
+    setClaimDividendResult(result);
   };
 
   return (
@@ -116,7 +122,7 @@ const App = () => {
           <h6 className="border-bottom pb-2 mb-0">Pending $USDC Rewards</h6>
           <div className="text-muted pt-3">
             <strong className="d-block text-gray-dark text-bold">
-              ${conect.balance} USDC
+              ${conect.balance}
             </strong>
             <div className="d-block">
               <button
